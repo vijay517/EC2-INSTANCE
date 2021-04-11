@@ -14,6 +14,7 @@ import numpy as np
 import random
 import json
 import ast
+from topsis import topsis
 # from invoke model import *
 # model1 = pickle.load(open("model.dat", "rb"))
 # model2 = pickle.load(open("model.dat", "rb"))
@@ -239,6 +240,20 @@ def mopso(x0, bounds, n_particles, max_iter, dimension, exclude, cost, is_online
         bounds[0:8, 1], bounds[0:8, 0]))
     paretofront.iloc[:, 8] = evaluate_position(temp, True, bounds[8])
     paretofront.iloc[:, 10] = np.dot(x0, cost.transpose())[0]
+    
+    t = []
+    for i in range(0,20):
+        a = [paretofront.iloc[i,9],paretofront.iloc[i,11]]
+        t.append(a)
+    w = [0.5,0.5]
+    I = [1,0]
+    #print(len(t))
+    decision = topsis(t,w,I)
+    decision.calc()
+    #print(type(decision.C))
+    paretofront.iloc[:,12]=decision.C
+    paretofront= paretofront.sort_values('12', ascending = False)
+    print(paretofront)
     return fig, paretofront
 
 
