@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 role = "arn:aws:iam::968710761052:role/service-role/AmazonSageMaker-ExecutionRole-20210205T194406"
 
 currentTime = datetime.datetime.now()
-modelname = f"model_{currentTime.month}_{currentTime.day}_{currentTime.hour}_{currentTime.minute}_{currentTime.second}"
+modelname = f"model_{currentTime.day}_{currentTime.month}_2021_{currentTime.hour}H_{currentTime.minute}M_{currentTime.second}S"
 
 
 load_data = prep_data('cement.csv','fypcementbucket',modelname)
