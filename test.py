@@ -10,7 +10,7 @@ SERVICE INPUT PAYLOAD FORMAT
 SERVICE OUTPUT PAYLOAD FORMAT
 
 {"service_no":1,"service_name":"Deploy model",
-    "service_output_payload" :"inputs as JSON"}
+    "service_output_payload" :"output as JSON"}
 -------------------------------------------------------------
 SAMPLE SERVICE_INPUT_PAYLOAD FOR SERVICE NUMBER 5 
 
@@ -38,7 +38,7 @@ import pprint
 import time
 import threading
 from AWSIoTPythonSDK.MQTTLib import AWSIoTMQTTClient
-
+from topsis import topsis
 
 '''TEST SECTION - REMOVE LATER '''
 #os.system(f'echo "{SERVICE_NUMBER}">temp.txt ')
@@ -120,11 +120,21 @@ def Deploy_Model(payload, update=False):
 
         sample model_data : 's3://fypcementbucket/models/model_2021_2_19/sagemaker-tensorflow-scriptmode-2021-02-21-13-37-05-805/output/model.tar.gz'
     '''
-
+    
     from sagemaker.tensorflow.serving import Model
-
+    import boto3
+    
+    client = boto3.client('sagemaker')
+    
+    #Try deleting the previous configurations if present
+    try:
+        client.delete_endpoint_config(EndpointConfigName='sagemaker-tensorflow-serving-2021-02-21-fypmodel-endpoint')
+    except:
+        pass
+    
+    
     model = Model(
-        model_data=payload['model_data'],
+        model_data='s3://fypcementbucket/models/model_3_16_14_52_30/sagemaker-tensorflow-scriptmode-2021-03-16-14-52-31-100/output/model.tar.gz',
         role="arn:aws:iam::968710761052:role/service-role/AmazonSageMaker-ExecutionRole-20210205T194406",
         framework_version='1.12.0'
     )
@@ -134,7 +144,7 @@ def Deploy_Model(payload, update=False):
 
     predictor = model.deploy(initial_instance_count=1, instance_type='ml.c5.xlarge',
                              endpoint_name='sagemaker-tensorflow-serving-2021-02-21-fypmodel-endpoint', update_endpoint=update)
-
+    
     Get_ModelStatus()
 
 
@@ -194,7 +204,7 @@ def Get_Prescription(payload):
     sample modelName: 'model_2021_2_19'
 
     '''
-
+    #payload = {'data':{ 'Age': {'optimised': True, 'value': 'null'}, 'BlastFurn': {'optimised': True, 'value': 'null'}, 'Cement': {'optimised': True, 'value': 'null'}, 'CoarseAggregate': {'optimised': True, 'value': 'null'}, 'FineAggregate': {'optimised': True, 'value': 'null'}, 'FlyAsh': {'optimised': True, 'value': 'null'}, 'Superplasticizer': {'optimised': True, 'value': 'null'}, 'Water': {'optimised': True, 'value': 'null'}, 'optimisationType': "moo"},'modelName':'model_3_16_14_52_30'}
     # Add your code below
     import boto3
     import GA as ga
@@ -231,8 +241,11 @@ def Get_Prescription(payload):
                 x0[dict1[str(i)]] = data[str(i)]['value']
     # print(exclude)
     if data["optimisationType"] == "moo":
+        print("executed")
         fig, paretofront = mp.mopso(
-            x0, bounds, 10, 10, 8, exclude, cost, True)
+            x0, bounds, 20, 80, 8, exclude, cost, True)
+        #print(paretofront)
+        #print(paretofront,"TEST")
         # print(paretofront)
         fig.savefig("precribe.png")
         pd.DataFrame(paretofront).to_csv("prescribe_data.csv")
@@ -242,7 +255,7 @@ def Get_Prescription(payload):
         s3_1.meta.client.upload_file(
             "prescribe_data.csv", 'fypcementbucket', 'prescriptions/MOO/prescribe_data.csv')
     else:
-        data = ga.GA(bounds, 15, 10, 8, exclude, x0, True)
+        data = ga.GA(bounds, 15, 50, 8, exclude, x0, True)
         print(data)
         df = pd.DataFrame(data)
         df.iloc[0].to_csv("prescribe_data.csv")
@@ -296,6 +309,7 @@ elif SERVICE_NUMBER == 5:
     try:
         Get_Prescription(SERVICE_INPUT_PAYLOAD)
     except Exception as e:
+        print(e)
         MQTT_PUBLISH(PUBTOPIC, {"service_no": 5,
                                 "status": "failed", "msg": f'Error: {str(e)}'})
     else:
